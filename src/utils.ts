@@ -30,6 +30,12 @@ export class Utils {
     return '';
   }
 
+  public static validateApiUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url.trim();
+    return '';
+  }
+
   public static validateProxy(proxy: string): string {
     if (!proxy) return '';
     let re;
@@ -132,12 +138,42 @@ export class Utils {
   }
 
   public static isAIChatSidebar(uri: vscode.Uri | undefined): boolean {
+    // first check if the active tab is the Claude Code sidebar
+    const activeTab = vscode.window.tabGroups?.activeTabGroup?.activeTab;
+    const viewType = (activeTab?.input as { viewType?: string } | undefined)?.viewType;
+    if (viewType?.includes('claude') && activeTab?.label.toLowerCase().includes('claude')) {
+      return true;
+    }
+
+    // second, check if the active uri has an AI sidebar scheme
     if (!uri) return false;
-    return uri.scheme === 'vscode-chat-code-block';
+    if (uri.fsPath.endsWith('.log')) return false;
+    if (uri.scheme === 'vscode-chat-code-block') return true;
+    if (uri.scheme === 'openai-codex') return true;
+    return false;
   }
 
   public static isPossibleAICodeInsert(e: vscode.TextDocumentChangeEvent): boolean {
-    return e.contentChanges.length === 1 && e.contentChanges?.[0].text.trim().length > 2;
+    if (e.document.fileName.endsWith('.log')) return false;
+    if (e.contentChanges.length !== 1) return false;
+
+    const text = e.contentChanges?.[0].text.trim();
+    if (text.length <= 2) return false;
+
+    // inserted text must be 2+ lines or single line 50+ chars long to qualify as AI
+    return (text.match(/[\n\r]/g) || []).length > 2 || text.length > 50;
+  }
+
+  public static getFocusedFile(document?: vscode.TextDocument): string | undefined {
+    const doc = document ?? vscode.window.activeTextEditor?.document;
+    if (doc) {
+      const file = doc.fileName;
+      if (Utils.isRemoteUri(doc.uri)) {
+        return `${doc.uri.authority}${doc.uri.path}`.replace('ssh-remote+', 'ssh://');
+        // TODO: how to support 'dev-container', 'attached-container', 'wsl', and 'codespaces' schemes?
+      }
+      return file;
+    }
   }
 
   public static isPossibleHumanCodeInsert(e: vscode.TextDocumentChangeEvent): boolean {
@@ -161,4 +197,52 @@ export class Utils {
       return vscode.env.appName.replace(/\s/g, '').toLowerCase();
     }
   }
+
+  public static isAICapableEditor(): boolean {
+    const editorName = vscode.env.appName.toLowerCase();
+    return editorName.includes('cursor') || editorName.includes('windsurf');
+  }
+
+  public static hasAIExtensions(): boolean {
+    const commonAIExtensions = [
+      'anthropic.claude-code',
+      'codeium.codeium',
+      'continue.continue',
+      'github.copilot-chat',
+      'github.copilot',
+      'ms-vscode.vscode-ai-toolkit',
+      'openai.openai-gpt-vscode',
+      'openai.chatgpt',
+      'sourcegraph.cody-ai',
+      'supermaven.supermaven',
+      'tabnine.tabnine-vscode',
+    ];
+
+    return commonAIExtensions.some((extensionId) => {
+      const extension = vscode.extensions.getExtension(extensionId);
+      return extension && extension.isActive;
+    });
+  }
+
+  public static checkAICapabilities(): boolean {
+    return this.isAICapableEditor() || this.hasAIExtensions();
+  }
+}
+
+interface FileSelection {
+  selection: vscode.Position;
+  lastHeartbeatAt: number;
+}
+
+export interface FileSelectionMap {
+  [key: string]: FileSelection;
+}
+
+export interface Lines {
+  [fileName: string]: number;
+}
+
+export interface LineCounts {
+  ai: Lines;
+  human: Lines;
 }

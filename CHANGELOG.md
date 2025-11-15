@@ -1,6 +1,38 @@
 
 # Changelog
 
+## 25.4.0 (2025-10-24)
+
+- Ability to customize status bar item position.
+  [#463](https://github.com/wakatime/vscode-wakatime/pull/463)
+
+## 25.3.3 (2025-10-23)
+
+- Validate api_url setting before using.
+
+## 25.3.2 (2025-09-02)
+
+- Improve AI coding detection heuristic.
+  [#440](https://github.com/wakatime/vscode-wakatime/issues/440)
+
+## 25.3.1 (2025-08-23)
+
+- Only allow AI Coding category when an AI extension is installed.
+  [#440](https://github.com/wakatime/vscode-wakatime/issues/440)
+- Exclude logfiles from AI category.
+
+## 25.3.0 (2025-08-02)
+
+- Track line additions and deletions by AI vs Human.
+
+## 25.2.2 (2025-07-30)
+
+- Buffer heartbeats and use bulk api endpoint on web extension.
+
+## 25.2.1 (2025-07-30)
+
+- Buffer heartbeats and only send to API once every 30 seconds.
+
 ## 25.2.0 (2025-07-20)
 
 - Improve AI Coding detection.
